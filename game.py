@@ -1,58 +1,158 @@
 import pygame
+import random
+from math import cos, sin, radians
 
 class Game:
     def __init__(self):
+        pygame.init()
         self.screen = pygame.display.set_mode((640, 480))
         self.clock = pygame.time.Clock()
-        self.player1 = Paddle(self.screen, 10)
-        self.player2 = Paddle(self.screen, 600)
+        self.player1 = Paddle(self.screen, 5)
+        self.player2 = Paddle(self.screen, 625)
         self.ball = Ball(self.screen)
+        self.myFont = pygame.font.SysFont('arial', 30)
 
     def update(self):
         self.player1.update()
         self.player2.update()
-        self.ball.update()
+        reward, done, score = self.ball.update(self.player1, self.player2)
+        return reward, done, score
 
     def render(self):
         self.screen.fill((0, 0, 0))
         self.player1.render()
         self.player2.render()
         self.ball.render()
+        textSurface = self.myFont.render(f'{self.player1.score}:{self.player2.score}', False, (255, 255, 255))
+        self.screen.blit(textSurface, (300, 20))
         pygame.display.flip()
 
     def run(self, play):
-        self.update()
+        reward, done, score = self.update()
         self.render()
         if play:
             self.clock.tick(60)
+        return reward, done, score
 
 
 class Ball:
     def __init__(self, screen):
         self.screen = screen
-        self.x = 0
-        self.y = 0
-        self.x_speed = 0
-        self.y_speed = 0
+        self.x = 320
+        self.y = 240
+        self.angle = random.randint(-75, 75) + 180 * random.randint(0, 1)
+        self.speed = 8
+        self.radius = 10
+        self.scoreDiff = 0
 
-    def update(self):
-        self.x += self.x_speed
-        self.y += self.y_speed
+    def update(self, player1, player2):
+        reward = 0
+        done = False
+        
+        # Check if ball hits the top or bottom
+        if self.y + self.radius > 480 or self.y - self.radius < 0:
+            self.angle = -self.angle
+
+        # left collide
+        if self.x - self.radius >= player1.x and self.x - self.radius <= player1.x + player1.width:
+            if self.y - player1.y >= -self.radius:
+                if self.y - player1.y <= 1/8 * (player1.height + self.radius):
+                    self.angle = -45
+
+                elif self.y - player1.y <= 2/8 * (player1.height + self.radius):
+                    self.angle = -30
+
+                elif self.y - player1.y <= 3/8 * (player1.height + self.radius):
+                    self.angle = -15
+
+                elif self.y - player1.y <= 4/8 * (player1.height + self.radius):
+                    self.angle = -10
+
+                elif self.y - player1.y <= 5/8 * (player1.height + self.radius):
+                    self.angle = 10
+
+                elif self.y - player1.y <= 6/8 * (player1.height + self.radius):
+                    self.angle = 15
+
+                elif self.y - player1.y <= 7/8 * (player1.height + self.radius):
+                    self.angle = 30
+
+                elif self.y - player1.y <= 8/8 * (player1.height + self.radius):
+                    self.angle = 45
+                reward = 1
+
+        # right collide
+        elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
+            if self.y - player2.y >= -self.radius:
+                if self.y - player2.y <= 1/8 * (player2.height + self.radius):
+                    self.angle = -135
+
+                elif self.y - player2.y <= 2/8 * (player2.height + self.radius):
+                    self.angle = -150
+
+                elif self.y - player2.y <= 3/8 * (player2.height + self.radius):
+                    self.angle = -165
+
+                elif self.y - player2.y <= 4/8 * (player2.height + self.radius):
+                    self.angle = 170
+
+                elif self.y - player2.y <= 5/8 * (player2.height + self.radius):
+                    self.angle = 190
+
+                elif self.y - player2.y <= 6/8 * (player2.height + self.radius):
+                    self.angle = 165
+
+                elif self.y - player2.y <= 7/8 * (player2.height + self.radius):
+                    self.angle = 150
+
+                elif self.y - player2.y <= 8/8 * (player2.height + self.radius):
+                    self.angle = 135
+
+        self.y += self.speed*sin(radians(self.angle))
+        self.x += self.speed*cos(radians(self.angle))
+
+
+        if self.x - self.radius >= 650:
+            player1.score += 1
+            reward = 10
+            self.scoreDiff += 1
+            self.x = player2.x - player2.width * 2 - self.radius
+            self.y = player2.y + player2.height/2
+            self.angle = random.randint(-75, 75) + 180
+
+        temp = self.scoreDiff
+        
+        if self.x + self.radius <= -10:
+            player2.score += 1
+            reward = -10
+            if player2.score % 5 == 0:
+                done = True
+                self.scoreDiff = 0
+            self.x = player1.x + player1.width * 2 + self.radius
+            self.y = player1.y + player1.height/2
+            self.angle = random.randint(-75, 75)
+
+
+        return reward, done, temp
 
     def render(self):
-        pygame.draw.circle(self.screen, (255, 255, 255), (self.x, self.y), 10)
+        pygame.draw.circle(self.screen, (255, 255, 255), (self.x, self.y), self.radius)
+
 
 class Paddle:
     def __init__(self, screen, x):
         self.screen = screen
-        self.y = 0
         self.x = x
         self.speed = 5
+        self.width = 10
+        self.height = 100
+        self.y = 240 - self.height / 2
         self.score = 0
         self.mode = 0
 
     def update(self):
         self.y += self.mode * self.speed
+        self.y = max(0, min(self.y, 480 - self.height))
 
     def render(self):
-        pygame.draw.rect(self.screen, (255, 255, 255), (self.x, self.y, 10, 100))
+        pygame.draw.rect(self.screen, (255, 255, 255), (self.x, self.y, self.width, self.height))
