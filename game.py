@@ -23,8 +23,8 @@ class Game:
         self.player1.render()
         self.player2.render()
         self.ball.render()
-        textSurface = self.myFont.render(f'{self.player1.score}:{self.player2.score}', False, (255, 255, 255))
-        self.screen.blit(textSurface, (300, 20))
+        textSurface = self.myFont.render(f'AI {self.player1.score}:{self.player2.score} YOU', False, (255, 255, 255))
+        self.screen.blit(textSurface, (250, 20))
         pygame.display.flip()
 
     def run(self, play):
