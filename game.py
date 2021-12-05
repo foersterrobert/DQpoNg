@@ -5,15 +5,19 @@ from math import cos, sin, radians
 
 class Game:
     def __init__(self, play, train):
+        self.play = play
+        self.train = train
         pygame.init()
-        self.screen = pygame.display.set_mode((640, 480))
-        self.clock = pygame.time.Clock()
+        if self.play:
+            self.myFont = pygame.font.SysFont('arial', 30)
+            self.screen = pygame.display.set_mode((640, 480))
+            self.clock = pygame.time.Clock()
+        else:
+            self.screen = None
+
         self.player1 = Paddle(self.screen, 5)
         self.player2 = Paddle(self.screen, 625)
         self.ball = Ball(self.screen)
-        self.myFont = pygame.font.SysFont('arial', 30)
-        self.play = play
-        self.train = train
 
     def update(self):
         self.player1.update()
@@ -56,7 +60,7 @@ class Ball:
         self.y = 240
         self.angle = random.randint(-45, 45) + 180 * random.randint(0, 1)
         self.speed = 8
-        self.radius = 8
+        self.radius = 6
         self.scoreDiff = 0
 
     def update(self, player1, player2):
@@ -93,7 +97,7 @@ class Ball:
 
                 elif self.y - player1.y <= 8/8 * (player1.height + self.radius):
                     self.angle = 45
-                reward = 0.05
+                reward = 0.1
 
         # right collide
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
@@ -126,26 +130,26 @@ class Ball:
         self.x += self.speed*cos(radians(self.angle))
 
         # Check if the Ball went right
-        if self.x - self.radius >= 650:
+        if self.x - self.radius >= 670:
             player1.score += 1
-            reward = 0.5
+            reward = 1
             self.scoreDiff += 1
             self.x = player2.x - player2.width * 2 - self.radius
-            self.y = player2.y + player2.height/2
-            self.angle = random.randint(-45, 45) + 180
+            self.y = 240
+            self.angle = 180
 
         temp = self.scoreDiff
         
         # Check if the Ball went left
-        if self.x + self.radius <= -10:
+        if self.x + self.radius <= -30:
             player2.score += 1
             reward = -1
             if player2.score % 5 == 0:
                 done = True
                 self.scoreDiff = 0
             self.x = player1.x + player1.width * 2 + self.radius
-            self.y = player1.y + player1.height/2
-            self.angle = random.randint(-45, 45)
+            self.y = 240
+            self.angle = 0
 
         return reward, done, temp
 
@@ -159,7 +163,7 @@ class Paddle:
         self.x = x
         self.speed = 4
         self.width = 10
-        self.height = 90
+        self.height = 80
         self.y = 240 - self.height / 2
         self.score = 0
         self.mode = 0

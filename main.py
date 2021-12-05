@@ -38,17 +38,14 @@ def main(play, train):
                 if event.type == pygame.KEYDOWN and play:
                     if event.key == pygame.K_UP:
                         game.player2.mode = -1
-                    
                     if event.key == pygame.K_DOWN:
                         game.player2.mode = 1
-
                 if event.type == pygame.QUIT:
                     run = False
                     
             if not play:
                 if game.ball.y < game.player2.y + game.player2.height/2:
                     game.player2.mode = -1
-
                 elif game.ball.y > game.player2.y - game.player2.height/2:
                     game.player2.mode = 1
 
@@ -103,7 +100,6 @@ def main(play, train):
                 # Compute Loss
                 q_values = online_net(obses_t)
                 action_q_values = torch.gather(input=q_values, dim=1, index=actions_t)
-
                 loss = nn.functional.smooth_l1_loss(action_q_values, targets)
 
                 # Gradient Descent
@@ -118,7 +114,7 @@ def main(play, train):
                 if done:
                     if score > record:
                         record = score
-                        print('Record:', record)
+                        print('Record:', record, 'Step:', step)
                         online_net.save()
     else:
         online_net.load_state_dict(torch.load('model/model.pth'))
@@ -127,17 +123,13 @@ def main(play, train):
                 if event.type == pygame.KEYDOWN and play:
                     if event.key == pygame.K_UP:
                         game.player2.mode = -1
-                    
                     if event.key == pygame.K_DOWN:
                         game.player2.mode = 1
-
                 if event.type == pygame.QUIT:
-                    run = False
-                    
+                    run = False                   
             if not play:
                 if game.ball.y < game.player2.y + game.player2.height/2:
                     game.player2.mode = -1
-
                 elif game.ball.y > game.player2.y - game.player2.height/2:
                     game.player2.mode = 1
 
@@ -146,7 +138,6 @@ def main(play, train):
 
             if action == 0:
                 game.player1.mode = -1
-
             else:
                 game.player1.mode = 1
 
@@ -155,4 +146,4 @@ def main(play, train):
     pygame.quit()
 
 if __name__ == '__main__':
-    main(False, True)
+    main(True, False)
