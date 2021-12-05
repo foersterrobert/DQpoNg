@@ -9,6 +9,8 @@ class Game:
         self.train = train
         pygame.init()
         if self.play:
+            pygame.display.set_caption('Pong')
+            pygame.display.set_icon(pygame.image.load('assets/icon.png'))
             self.myFont = pygame.font.SysFont('arial', 30)
             self.screen = pygame.display.set_mode((640, 480))
             self.clock = pygame.time.Clock()
