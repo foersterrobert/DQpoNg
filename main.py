@@ -21,18 +21,19 @@ EPSILON_DECAY = 10000
 TARGET_UPDATE_FREQ = 10000
 
 def main(play, train):
-    game = Game()
+    game = Game(play, train)
     online_net = Linear_QNet(5, 2)
-    target_net = Linear_QNet(5, 2)
-    target_net.load_state_dict(online_net.state_dict())
-    memory = deque(maxlen=MAX_MEMORY)
-    optimizer = optim.Adam(online_net.parameters(), lr=LEARNING_RATE)
-    record = 0
-
     run = True
-    while run:
+    if train:
+        target_net = Linear_QNet(5, 2)
+        target_net.load_state_dict(online_net.state_dict())
+        memory = deque(maxlen=MAX_MEMORY)
+        optimizer = optim.Adam(online_net.parameters(), lr=LEARNING_RATE)
+        record = 0
         state_old = game.getState()
         for step in itertools.count(): 
+            if not run:
+                break
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN and play:
                     if event.key == pygame.K_UP:
@@ -58,7 +59,7 @@ def main(play, train):
                     game.player1.mode = -1
                 else:
                     game.player1.mode = 1
-                reward, done, score = game.run(play, train)
+                reward, done, score = game.run()
                 state_new = game.getState()
                 memory.append((state_old, action, reward, done, state_new))
                 state_old = state_new
@@ -74,7 +75,7 @@ def main(play, train):
                 else:
                     game.player1.mode = 1
 
-                reward, done, score = game.run(play, train)
+                reward, done, score = game.run()
                 state_new = game.getState()
                 memory.append((state_old, action, reward, done, state_new))
                 state_old = state_new
@@ -111,7 +112,7 @@ def main(play, train):
                 optimizer.step()
 
                 # Update Target Net
-                if step % TARGET_UPDATE_FREQ == 0:
+                if step-MIN_REPLAY_SIZE % TARGET_UPDATE_FREQ == 0:
                     target_net.load_state_dict(online_net.state_dict())
 
                 if done:
@@ -119,7 +120,38 @@ def main(play, train):
                         record = score
                         print('Record:', record)
                         online_net.save()
+    else:
+        online_net.load_state_dict(torch.load('model/model.pth'))
+        while run:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and play:
+                    if event.key == pygame.K_UP:
+                        game.player2.mode = -1
+                    
+                    if event.key == pygame.K_DOWN:
+                        game.player2.mode = 1
 
+                if event.type == pygame.QUIT:
+                    run = False
+                    
+            if not play:
+                if game.ball.y < game.player2.y + game.player2.height/2:
+                    game.player2.mode = -1
+
+                elif game.ball.y > game.player2.y - game.player2.height/2:
+                    game.player2.mode = 1
+
+            state = game.getState()
+            action = online_net.act(state)
+
+            if action == 0:
+                game.player1.mode = -1
+
+            else:
+                game.player1.mode = 1
+
+            reward, done, score = game.run()
+            
     pygame.quit()
 
 if __name__ == '__main__':

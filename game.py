@@ -4,7 +4,7 @@ import numpy as np
 from math import cos, sin, radians
 
 class Game:
-    def __init__(self):
+    def __init__(self, play, train):
         pygame.init()
         self.screen = pygame.display.set_mode((640, 480))
         self.clock = pygame.time.Clock()
@@ -12,6 +12,8 @@ class Game:
         self.player2 = Paddle(self.screen, 625)
         self.ball = Ball(self.screen)
         self.myFont = pygame.font.SysFont('arial', 30)
+        self.play = play
+        self.train = train
 
     def update(self):
         self.player1.update()
@@ -39,10 +41,10 @@ class Game:
 
         return np.array(state, dtype=np.float)
 
-    def run(self, play, train):
+    def run(self):
         reward, done, score = self.update()
-        self.render()
-        if play:
+        if self.play:
+            self.render()
             self.clock.tick(60)
         return reward, done, score
 
@@ -52,9 +54,9 @@ class Ball:
         self.screen = screen
         self.x = 320
         self.y = 240
-        self.angle = random.randint(-60, 60) + 180 * random.randint(0, 1)
+        self.angle = random.randint(-45, 45) + 180 * random.randint(0, 1)
         self.speed = 8
-        self.radius = 10
+        self.radius = 8
         self.scoreDiff = 0
 
     def update(self, player1, player2):
@@ -91,7 +93,7 @@ class Ball:
 
                 elif self.y - player1.y <= 8/8 * (player1.height + self.radius):
                     self.angle = 45
-                # reward = 0.1
+                reward = 0.05
 
         # right collide
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
@@ -126,11 +128,11 @@ class Ball:
         # Check if the Ball went right
         if self.x - self.radius >= 650:
             player1.score += 1
-            reward = 1
+            reward = 0.5
             self.scoreDiff += 1
             self.x = player2.x - player2.width * 2 - self.radius
             self.y = player2.y + player2.height/2
-            self.angle = random.randint(-60, 60) + 180
+            self.angle = random.randint(-45, 45) + 180
 
         temp = self.scoreDiff
         
@@ -143,7 +145,7 @@ class Ball:
                 self.scoreDiff = 0
             self.x = player1.x + player1.width * 2 + self.radius
             self.y = player1.y + player1.height/2
-            self.angle = random.randint(-75, 75)
+            self.angle = random.randint(-45, 45)
 
         return reward, done, temp
 
@@ -155,7 +157,7 @@ class Paddle:
     def __init__(self, screen, x):
         self.screen = screen
         self.x = x
-        self.speed = 5
+        self.speed = 4
         self.width = 10
         self.height = 90
         self.y = 240 - self.height / 2
