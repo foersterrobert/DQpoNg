@@ -7,8 +7,8 @@ class Game:
     def __init__(self, play, train):
         self.play = play
         self.train = train
-        pygame.init()
         if self.play:
+            pygame.init()
             pygame.display.set_caption('Pong')
             pygame.display.set_icon(pygame.image.load('assets/icon.png'))
             self.myFont = pygame.font.SysFont('arial', 30)
@@ -24,7 +24,7 @@ class Game:
     def update(self):
         self.player1.update()
         self.player2.update()
-        reward, done, score = self.ball.update(self.player1, self.player2)
+        reward, done, score = self.ball.update(self.player1, self.player2, self.train)
         return reward, done, score
 
     def render(self):
@@ -58,6 +58,7 @@ class Game:
 class Ball:
     def __init__(self, screen):
         self.screen = screen
+        self.frame = 0
         self.x = 320
         self.y = 240
         self.angle = random.randint(-45, 45) + 180 * random.randint(0, 1)
@@ -65,9 +66,11 @@ class Ball:
         self.radius = 6
         self.scoreDiff = 0
 
-    def update(self, player1, player2):
+    def update(self, player1, player2, train):
         reward = 0
         done = False
+        if train:
+            self.frame += 1
         
         # Check if ball hits the top or bottom
         if self.y + self.radius > 480 or self.y - self.radius < 0:
@@ -99,7 +102,7 @@ class Ball:
 
                 elif self.y - player1.y <= 8/8 * (player1.height + self.radius):
                     self.angle = 45
-                reward = 0.1
+                reward = 2
 
         # right collide
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
@@ -134,24 +137,26 @@ class Ball:
         # Check if the Ball went right
         if self.x - self.radius >= 670:
             player1.score += 1
-            reward = 1
+            reward = 10
             self.scoreDiff += 1
             self.x = player2.x - player2.width * 2 - self.radius
             self.y = 240
             self.angle = 180
+            self.frame = 0
 
         temp = self.scoreDiff
         
         # Check if the Ball went left
-        if self.x + self.radius <= -30:
+        if self.x + self.radius <= -30 or self.frame > 1000:
             player2.score += 1
-            reward = -1
+            reward = -10
             if player2.score % 5 == 0:
                 done = True
                 self.scoreDiff = 0
             self.x = player1.x + player1.width * 2 + self.radius
             self.y = 240
             self.angle = 0
+            self.frame = 0
 
         return reward, done, temp
 

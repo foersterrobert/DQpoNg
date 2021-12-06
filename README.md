@@ -1,3 +1,9 @@
 # DqpoNg
 ![DQpoNg](assets/DQpoNg.png)
 
+#### requirements:
+```js
+torch==1.9.0
+numpy==1.21.3
+pygame==2.0.1
+```
