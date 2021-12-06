@@ -9,6 +9,7 @@ import torch
 import random
 from collections import deque
 import itertools
+import argparse
 
 GAMMA = 0.99
 BATCH_SIZE = 32
@@ -146,4 +147,8 @@ def main(play, train):
     pygame.quit()
 
 if __name__ == '__main__':
-    main(True, False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--play', default='n', help='play the game')
+    parser.add_argument('--train', default='y', help='train the model')
+    args = parser.parse_args()
+    main(args.play == 'y', args.train == 'y')
