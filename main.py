@@ -23,6 +23,22 @@ TARGET_UPDATE_FREQ = 1000 * N_FRAMES
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def check_events(play, game):
+    if play:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    game.player2.mode = -1
+                if event.key == pygame.K_DOWN:
+                    game.player2.mode = 1
+            if event.type == pygame.QUIT:
+                return False
+    else:
+        if game.ball.y < game.player2.y + game.player2.height/2:
+            game.player2.mode = -1
+        elif game.ball.y > game.player2.y - game.player2.height/2:
+            game.player2.mode = 1
+    return True
 
 def main(play, train):
     game = Game(play, train)
@@ -38,21 +54,8 @@ def main(play, train):
             if not run:
                 break
             
-            if play:
-                for event in pygame.event.get():
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_UP:
-                            game.player2.mode = -1
-                        if event.key == pygame.K_DOWN:
-                            game.player2.mode = 1
-                    if event.type == pygame.QUIT:
-                        run = False
-
-            else:
-                if game.ball.y < game.player2.y + game.player2.height/2:
-                    game.player2.mode = -1
-                elif game.ball.y > game.player2.y - game.player2.height/2:
-                    game.player2.mode = 1
+            if not check_events(play, game):
+                run = False
 
             # Load with random actions at first
             if step % N_FRAMES == 0:
@@ -134,26 +137,13 @@ def main(play, train):
             else:
                 reward, done, score = game.run()
     else:
-        online_net.load_state_dict(torch.load('model/model.pth', map_location=DEVICE))
+        online_net.load_state_dict(torch.load('model/model1.pth', map_location=DEVICE))
         for step in itertools.count():
             if not run:
                 break
 
-            if play:
-                for event in pygame.event.get():
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_UP:
-                            game.player2.mode = -1
-                        if event.key == pygame.K_DOWN:
-                            game.player2.mode = 1
-                    if event.type == pygame.QUIT:
-                        run = False
-
-            else:
-                if game.ball.y < game.player2.y + game.player2.height/2:
-                    game.player2.mode = -1
-                elif game.ball.y > game.player2.y - game.player2.height/2:
-                    game.player2.mode = 1
+            if not check_events(play, game):
+                run = False
 
             if step % N_FRAMES == 0:
                 state = game.getState()
