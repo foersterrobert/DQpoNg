@@ -94,57 +94,19 @@ class Ball:
         # left collide
         if self.x - self.radius >= player1.x and self.x - self.radius <= player1.x + player1.width:
             if self.y - player1.y >= -self.radius:
-                if self.y - player1.y <= 1/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[0]
-
-                elif self.y - player1.y <= 2/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[1]
-
-                elif self.y - player1.y <= 3/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[2]
-
-                elif self.y - player1.y <= 4/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[3]
-
-                elif self.y - player1.y <= 5/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[4]
-
-                elif self.y - player1.y <= 6/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[5]
-
-                elif self.y - player1.y <= 7/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[6]
-
-                elif self.y - player1.y <= 8/8 * (player1.height + self.radius):
-                    self.angle = player1.angles[7]
+                for i in range(len(player1.angles)):
+                    if self.y - player1.y <= (i+1)/8 * (player1.height + self.radius):
+                        self.angle = player1.angles[i]
+                        break
                 reward = 2
 
         # right collide
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
             if self.y - player2.y >= -self.radius:
-                if self.y - player2.y <= 1/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[0]
-
-                elif self.y - player2.y <= 2/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[1]
-
-                elif self.y - player2.y <= 3/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[2]
-
-                elif self.y - player2.y <= 4/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[3]
-
-                elif self.y - player2.y <= 5/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[4]
-
-                elif self.y - player2.y <= 6/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[5]
-
-                elif self.y - player2.y <= 7/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[6]
-
-                elif self.y - player2.y <= 8/8 * (player2.height + self.radius):
-                    self.angle = player2.angles[7]
+                for i in range(len(player2.angles)):
+                    if self.y - player2.y <= (i+1)/8 * (player2.height + self.radius):
+                        self.angle = player2.angles[i]
+                        break
 
         self.y += self.speed*sin(radians(self.angle))
         self.x += self.speed*cos(radians(self.angle))
