@@ -15,64 +15,73 @@ GAMMA = 0.95
 BATCH_SIZE = 64
 LEARNING_RATE = 0.00025
 MAX_MEMORY = 200_000
-MIN_REPLAY_SIZE = 140_000 * N_FRAMES
+MIN_REPLAY_SIZE = 100_000 * N_FRAMES
 EPSILON_START = 1.0
-EPSILON_END = 0.04
-EPSILON_DECAY = 40000 * N_FRAMES
-TARGET_UPDATE_FREQ = 1000 * N_FRAMES
+EPSILON_END = 0.02
+EPSILON_DECAY = 50000 * N_FRAMES
+TARGET_UPDATE_FREQ = 10000 * N_FRAMES
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def check_events(play, game):
-    if play:
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    game.player2.mode = -1
-                if event.key == pygame.K_DOWN:
-                    game.player2.mode = 1
-            if event.type == pygame.QUIT:
-                return False
-    else:
+def human_action(game):
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                game.player2.mode = -1
+            if event.key == pygame.K_DOWN:
+                game.player2.mode = 1
+        if event.type == pygame.QUIT:
+            return False
+    return True
+
+def bot_action(game):
         if game.ball.y < game.player2.y + game.player2.height/2:
             game.player2.mode = -1
         elif game.ball.y > game.player2.y - game.player2.height/2:
             game.player2.mode = 1
-    return True
 
-def main(play, train):
-    game = Game(play, train)
+def main(args):
+    game = Game(args['see'], args['train'])
     online_net = Linear_QNet(5, 2).to(DEVICE)
+    if args['load']:
+        online_net.load_state_dict(torch.load('model/model1.pth', map_location=DEVICE))
     run = True
-    if train:
+    if args['train']:
         target_net = Linear_QNet(5, 2).to(DEVICE)
         target_net.load_state_dict(online_net.state_dict())
         memory = deque(maxlen=MAX_MEMORY)
         optimizer = optim.Adam(online_net.parameters(), lr=LEARNING_RATE)
-        record = 0
+        record = -50
+        score = 0
+
+        state_old = game.getState(False)
         for step in itertools.count():
             if not run:
                 break
+            if args['human']:
+                run = human_action(game)
+            elif args['bot']:
+                bot_action(game)
             
-            if not check_events(play, game):
-                run = False
-
-            # Load with random actions at first
-            if step % N_FRAMES == 0:
-                if step < MIN_REPLAY_SIZE:
-                    state_old = game.getState()
+            if step % N_FRAMES == 0: 
+                if args['selfPlay']:
+                    swapped_state = game.getState(True)
+                    action = online_net.act(swapped_state)
+                    if action == 0:
+                            game.player2.mode = -1
+                    else:
+                        game.player2.mode = 1
+                if step < MIN_REPLAY_SIZE: # Load with random actions at first
                     action = random.randint(0, 1)
                     if action == 0:
                         game.player1.mode = -1
                     else:
                         game.player1.mode = 1
-                    reward, done, score = game.run()
-                    state_new = game.getState()
+                    reward, done = game.run()
+                    state_new = game.getState(False)
                     memory.append((state_old, action, reward, done, state_new))
                     state_old = state_new
-
                 else:
-                    state_old = game.getState()
                     epsilon = np.interp(
                         step-MIN_REPLAY_SIZE, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])
                     if random.random() <= epsilon:
@@ -84,8 +93,9 @@ def main(play, train):
                     else:
                         game.player1.mode = 1
 
-                    reward, done, score = game.run()
-                    state_new = game.getState()
+                    reward, done = game.run()
+                    score += reward
+                    state_new = game.getState(False)
                     memory.append((state_old, action, reward, done, state_new))
                     state_old = state_new
 
@@ -133,35 +143,52 @@ def main(play, train):
                             record = score
                             print('Record:', record, 'Step:', step)
                             online_net.save()
+                        score = 0
     
             else:
-                reward, done, score = game.run()
+                reward, done = game.run()
     else:
-        online_net.load_state_dict(torch.load('model/model1.pth', map_location=DEVICE))
         for step in itertools.count():
             if not run:
                 break
 
-            if not check_events(play, game):
-                run = False
+            if args['human']:
+                run = human_action(game)
+            elif args['bot']:
+                bot_action(game)
 
             if step % N_FRAMES == 0:
-                state = game.getState()
+                if args['selfPlay']:
+                    swapped_state = game.getState(True)
+                    action = online_net.act(swapped_state)
+                    if action == 0:
+                            game.player2.mode = -1
+                    else:
+                        game.player2.mode = 1
+                state = game.getState(False)
                 action = online_net.act(state)
-
                 if action == 0:
                     game.player1.mode = -1
                 else:
                     game.player1.mode = 1
-
-                reward, done, score = game.run()
+                reward, done = game.run()
 
     pygame.quit()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--play', default='y', help='play the game')
+    parser.add_argument('--see', default='y', help='see the game')
+    parser.add_argument('--human', default='y', help='play the game')
+    parser.add_argument('--bot', default='n', help='train the model')
+    parser.add_argument('--selfPlay', default='n', help='train the model')
+    parser.add_argument('--load', default='y', help='train the model')
     parser.add_argument('--train', default='n', help='train the model')
     args = parser.parse_args()
-    main(args.play == 'y', args.train == 'y')
+    argsDict = vars(args)
+    for key, value in argsDict.items():
+        if value == 'y':
+            argsDict[key] = True
+        elif value == 'n':
+            argsDict[key] = False
+    main(argsDict)
