@@ -47,6 +47,7 @@ class Agent:
     def train(self, state_old, action, reward, done, state_new, step):
         self.memory.append((state_old, action, reward, done, state_new))
         if len(self.memory) > MIN_REPLAY_SIZE:
+            self.score += reward
             transitions = random.sample(self.memory, BATCH_SIZE)
 
             state_olds = np.asarray([t[0] for t in transitions])
