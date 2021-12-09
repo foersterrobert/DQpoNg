@@ -36,21 +36,7 @@ class Game:
         self.screen.blit(textSurface, (250, 20))
         pygame.display.flip()
 
-    def getState(self, swap):
-        if swap:
-            if self.ball.angle > 45:
-                swapped_ball = self.player1.angles[self.player2.angles.index(self.ball.angle)]
-            else:
-                swapped_ball = self.player2.angles[self.player1.angles.index(self.ball.angle)]
-            state = [
-                round(self.player2.y / (480 - self.player2.height), 2),
-                round(self.player1.y / (480 - self.player1.height), 2),
-                round(self.ball.y / 480, 2),
-                round((640 - self.ball.x) / 640, 2),
-                round(swapped_ball / 255, 2),
-            ]
-            return np.array(state, dtype=np.float)
-
+    def getState(self):
         state = [
                 round(self.player1.y / (480 - self.player1.height), 2),
                 round(self.player2.y / (480 - self.player2.height), 2),
@@ -66,7 +52,6 @@ class Game:
             self.render()
             self.clock.tick(60)
         return reward, done
-
 
 class Ball:
     def __init__(self, screen):
@@ -95,7 +80,7 @@ class Ball:
         if self.x - self.radius >= player1.x and self.x - self.radius <= player1.x + player1.width:
             if self.y - player1.y >= -self.radius:
                 for i in range(len(player1.angles)):
-                    if self.y - player1.y <= (i+1)/8 * (player1.height + self.radius):
+                    if self.y - player1.y <= (i+1)/len(player1.angles) * (player1.height + self.radius):
                         self.angle = player1.angles[i]
                         break
                 reward = 2
@@ -104,7 +89,7 @@ class Ball:
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
             if self.y - player2.y >= -self.radius:
                 for i in range(len(player2.angles)):
-                    if self.y - player2.y <= (i+1)/8 * (player2.height + self.radius):
+                    if self.y - player2.y <= (i+1)/len(player2.angles) * (player2.height + self.radius):
                         self.angle = player2.angles[i]
                         break
 
@@ -135,7 +120,6 @@ class Ball:
 
     def render(self):
         pygame.draw.circle(self.screen, (255, 255, 255), (self.x, self.y), self.radius)
-
 
 class Paddle:
     def __init__(self, screen, x, angles):
