@@ -7,7 +7,7 @@ import itertools
 import argparse
 
 N_FRAMES = 2
-N_FRAMES_Hand = 4
+N_FRAMES_HAND = 4
 
 def check_events():
     for event in pygame.event.get():
@@ -32,7 +32,7 @@ def main(args):
     player1 = Agent()
     # player2 = Agent()
     if args['load']:
-        player1.load('model')
+        player1.load('player1')
         # player2.load('player2')
     if args['human']:
         hand = Hand()
@@ -45,7 +45,7 @@ def main(args):
             run = check_events()
         if args['bot']:
             bot_action(game, 1)
-        if args['human'] and frame % N_FRAMES_Hand == 0:
+        if args['human'] and frame % N_FRAMES_HAND == 0:
             success, image = cap.read()
             run, action = hand.get_action(success, image)
             game.player2.mode = action

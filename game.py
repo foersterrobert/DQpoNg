@@ -18,7 +18,7 @@ class Game:
             self.screen = None
 
         self.player1 = Paddle(self.screen, 5, [-45, -30, -15, -10, 10, 15, 30, 45])
-        self.player2 = Paddle(self.screen, 625, [-135, -150, -165, 170, 190, 165, 150, 135]) # [225, 210, 195, 190, 170, 165, 150, 135]	
+        self.player2 = Paddle(self.screen, 625, [225, 210, 195, 190, 170, 165, 150, 135]) #  [-135, -150, -165, 170, 190, 165, 150, 135]
         self.ball = Ball(self.screen)
 
     def update(self):
@@ -105,7 +105,7 @@ class Ball:
                 done = [False, True]
             self.x = player2.x - player2.width * 2 - self.radius
             self.y = 240
-            self.angle = 180 # random.choice(player2.angles[2:-2])
+            self.angle = random.choice(player2.angles[2:-2])
             self.frame = 0
         
         # Check if the Ball went left
@@ -116,7 +116,7 @@ class Ball:
                 done = [True, False]
             self.x = player1.x + player1.width * 2 + self.radius
             self.y = 240
-            self.angle = 0 # random.choice(player1.angles[2:-2])
+            self.angle = random.choice(player1.angles[2:-2])
             self.frame = 0
 
         if self.frame > 1000:
