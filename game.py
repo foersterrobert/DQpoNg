@@ -18,7 +18,7 @@ class Game:
             self.screen = None
 
         self.player1 = Paddle(self.screen, 5, [-45, -30, -15, -10, 10, 15, 30, 45])
-        self.player2 = Paddle(self.screen, 625, [225, 210, 195, 190, 170, 165, 150, 135]) # 135 -> 225 | 180 + (180 - x)
+        self.player2 = Paddle(self.screen, 625, [-135, -150, -165, 170, 190, 165, 150, 135]) # [225, 210, 195, 190, 170, 165, 150, 135]	
         self.ball = Ball(self.screen)
 
     def update(self):
@@ -50,7 +50,7 @@ class Game:
         reward, done = self.update()
         if self.play:
             self.render()
-            self.clock.tick(60)
+            # self.clock.tick(60)
         return reward, done
 
 class Ball:
@@ -64,8 +64,8 @@ class Ball:
         self.radius = 6
 
     def update(self, player1, player2, train):
-        reward = 0
-        done = False
+        reward = [0, 0]
+        done = [False, False]
         if train:
             self.frame += 1
         
@@ -83,7 +83,7 @@ class Ball:
                     if self.y - player1.y <= (i+1)/len(player1.angles) * (player1.height + self.radius):
                         self.angle = player1.angles[i]
                         break
-                reward = 2
+                reward = [2, 0]
 
         # right collide
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
@@ -92,6 +92,7 @@ class Ball:
                     if self.y - player2.y <= (i+1)/len(player2.angles) * (player2.height + self.radius):
                         self.angle = player2.angles[i]
                         break
+                reward = [0, 2]
 
         self.y += self.speed*sin(radians(self.angle))
         self.x += self.speed*cos(radians(self.angle))
@@ -99,22 +100,36 @@ class Ball:
         # Check if the Ball went right
         if self.x - self.radius >= 670:
             player1.score += 1
-            reward = 10
+            reward = [10, -10]
+            if player1.score % 5 == 0:
+                done = [False, True]
             self.x = player2.x - player2.width * 2 - self.radius
             self.y = 240
-            self.angle = random.choice(player2.angles[2:-2])
+            self.angle = 180 # random.choice(player2.angles[2:-2])
             self.frame = 0
         
         # Check if the Ball went left
-        if self.x + self.radius <= -30 or self.frame > 1000:
+        if self.x + self.radius <= -30:
             player2.score += 1
-            reward = -10
+            reward = [-10, 10]
             if player2.score % 5 == 0:
-                done = True
+                done = [True, False]
+            self.x = player1.x + player1.width * 2 + self.radius
+            self.y = 240
+            self.angle = 0 # random.choice(player1.angles[2:-2])
+            self.frame = 0
+
+        if self.frame > 1000:
+          reward = [-10, 10]
+          if random.randint(0, 1) == 1:
             self.x = player1.x + player1.width * 2 + self.radius
             self.y = 240
             self.angle = random.choice(player1.angles[2:-2])
-            self.frame = 0
+          else:
+            self.x = player2.x - player2.width * 2 - self.radius
+            self.y = 240
+            self.angle = random.choice(player2.angles[2:-2])
+          self.frame = 0
 
         return reward, done
 
