@@ -30,14 +30,20 @@ class Hand:
                     self.mp_hands.HAND_CONNECTIONS,
                     self.mp_drawing_styles.get_default_hand_landmarks_style(),
                     self.mp_drawing_styles.get_default_hand_connections_style())
+            
+        image = cv2.flip(image, 1)
+        
+        if results.multi_hand_landmarks:
             if results.multi_hand_landmarks[0].landmark[4].y < results.multi_hand_landmarks[0].landmark[2].y:
                 action = -1
+                cv2.putText(image, "UP", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             else:
                 action = 1
+                cv2.putText(image, "DOWN", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         if not action:
             action = random.randint(0,1)
 
-        cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
+        cv2.imshow('MediaPipe Hands', image)
         if cv2.waitKey(5) & 0xFF == 27:
             run = False
         

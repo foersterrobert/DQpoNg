@@ -14,7 +14,7 @@ MAX_MEMORY = 200_000
 MIN_REPLAY_SIZE = 100_000
 EPSILON_START = 1.0
 EPSILON_END = 0.02
-EPSILON_DECAY = 50000
+EPSILON_DECAY = 80000
 TARGET_UPDATE_FREQ = 10000
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,7 +32,7 @@ class Agent:
     def get_action(self, state, step):
         action = None
         if isinstance(step, int):
-            epsilon = np.interp(step - MIN_REPLAY_SIZE, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])
+            epsilon = np.interp(step, [MIN_REPLAY_SIZE, EPSILON_DECAY + MIN_REPLAY_SIZE], [EPSILON_START, EPSILON_END])
             if random.random() <= epsilon:
                 action = random.randint(0, 1)
         if not action:
@@ -43,17 +43,18 @@ class Agent:
                 action = max_q_index.detach().item()
         return action
 
-    def train(self, state_old, action, reward, done, state_new, step, DDQN):
-        self.memory.append((state_old, action, reward, done, state_new))
+    def train(self, experience, step, DDQN):
+        self.memory.append(experience)
         if len(self.memory) > MIN_REPLAY_SIZE:
-            self.score += reward
-            transitions = random.sample(self.memory, BATCH_SIZE)
+            self.score += experience[2] # reward
 
-            state_olds = np.asarray([t[0] for t in transitions])
-            actions = np.asarray([t[1] for t in transitions])
-            rewards = np.asarray([t[2] for t in transitions])
-            dones = np.asarray([t[3] for t in transitions])
-            state_news = np.asarray([t[4] for t in transitions])
+            sample_experiences = random.sample(self.memory, BATCH_SIZE)
+
+            state_olds = np.asarray([t[0] for t in sample_experiences])
+            actions = np.asarray([t[1] for t in sample_experiences])
+            rewards = np.asarray([t[2] for t in sample_experiences])
+            dones = np.asarray([t[3] for t in sample_experiences])
+            state_news = np.asarray([t[4] for t in sample_experiences])
 
             state_olds_t = torch.as_tensor(state_olds, dtype=torch.float32, device=DEVICE)
             actions_t = torch.as_tensor(actions, dtype=torch.int64, device=DEVICE).unsqueeze(-1)
@@ -61,28 +62,24 @@ class Agent:
             dones_t = torch.as_tensor(dones, dtype=torch.float32, device=DEVICE).unsqueeze(-1)
             state_news_t = torch.as_tensor(state_news, dtype=torch.float32, device=DEVICE)
 
-            # Compute Targets
+            # get Outputs
+            q_values = self.online_net(state_olds_t)
+            q_values_action = q_values.gather(dim=1, index=actions_t)
+
+            # get Targets
             if DDQN:
-                targets_online_q_values = self.online_net(state_news_t)
-                targets_online_best_q_indices = targets_online_q_values.argmax(dim=1, keepdim=True)
-                targets_target_q_values = self.target_net(state_news_t)
-                targets_selected_q_values = torch.gather(input=targets_target_q_values, dim=1, index=targets_online_best_q_indices)
-                targets = rewards_t + GAMMA * \
-                    (1 - dones_t) * targets_selected_q_values
+                q_values_online = self.online_net(state_news_t)
+                q_values_online_max = q_values_online.argmax(dim=1, keepdim=True)
+                q_values_target = self.target_net(state_news_t)
+                q_values_target_selected = q_values_target.gather(dim=1, index=q_values_online_max)
+                targets = rewards_t + GAMMA * (1 - dones_t) * q_values_target_selected
             else:
-                target_q_values = self.target_net(state_news_t)
-                max_target_q_values = target_q_values.max(
-                    dim=1, keepdim=True)[0]
-                targets = rewards_t + GAMMA * \
-                    (1 - dones_t) * max_target_q_values
+                q_values_target = self.target_net(state_news_t)
+                q_values_target_max = q_values_target.max(dim=1, keepdim=True)[0]
+                targets = rewards_t + GAMMA * (1 - dones_t) * q_values_target_max
 
             # Compute Loss
-            q_values = self.online_net(state_olds_t)
-
-            action_q_values = torch.gather(
-                input=q_values, dim=1, index=actions_t)
-            loss = nn.functional.smooth_l1_loss(
-                action_q_values, targets)
+            loss = nn.functional.smooth_l1_loss(q_values_action, targets)
 
             # Gradient Descent
             self.optimizer.zero_grad()
@@ -94,7 +91,8 @@ class Agent:
                 print(step)
                 self.target_net.load_state_dict(self.online_net.state_dict())
 
-            if done:
+            # check for record and save model if done
+            if experience[3]: # done
                 if self.score > self.record:
                     self.record = self.score
                     print('Record:', self.record, 'Step:', step)

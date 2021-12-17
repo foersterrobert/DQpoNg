@@ -44,7 +44,7 @@ def main(args):
         if args['see']:
             run = check_events()
         if args['bot']:
-            bot_action(game, 1)
+            bot_action(game, 2)
         if args['human'] and frame % N_FRAMES_HAND == 0:
             success, image = cap.read()
             run, action = hand.get_action(success, image)
@@ -64,8 +64,8 @@ def main(args):
             reward, done = game.run()
             if args['train']:
                 state_new = game.getState()
-                player1.train(state_old, action1, reward[0], done[0], state_new, frame/N_FRAMES, True)
-                # player2.train(state_old, action2, reward[1], done[1], state_new, frame/N_FRAMES, False)
+                player1.train((state_old, action1, reward[0], done[0], state_new), frame/N_FRAMES, True)
+                # player2.train((state_old, action2, reward[1], done[1], state_new), frame/N_FRAMES, False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
