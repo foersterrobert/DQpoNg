@@ -1,4 +1,4 @@
-# DqpoNg
+# Double-DQN for Pong
 ![DQpoNg](assets/DQpoNg.gif)
 
 #### requirements:
