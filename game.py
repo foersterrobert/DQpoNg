@@ -37,13 +37,23 @@ class Game:
         pygame.display.flip()
 
     def getState(self):
-        state = [
-                round(self.player1.y / (480 - self.player1.height), 2),
-                round(self.player2.y / (480 - self.player2.height), 2),
-                round(self.ball.y / 480, 2),
-                round(self.ball.x / 640, 2),
-                round(self.ball.angle / 255, 2),
-        ]
+        # clamp angle between -1 and 1
+        if self.ball.angle <= 45:
+            state = [
+                    round(self.player1.y / (480 - self.player1.height), 2),
+                    round(self.player2.y / (480 - self.player2.height), 2),
+                    round(self.ball.y / 480, 2),
+                    round(self.ball.x / 640, 2),
+                    round((self.ball.angle - 45) / 90, 2),
+            ]
+        else:
+            state = [
+                    round(self.player1.y / (480 - self.player1.height), 2),
+                    round(self.player2.y / (480 - self.player2.height), 2),
+                    round(self.ball.y / 480, 2),
+                    round(self.ball.x / 640, 2),
+                    round((self.ball.angle - 135) / 90, 2),
+            ]
         return np.array(state, dtype=np.float)
 
     def run(self):
@@ -83,7 +93,7 @@ class Ball:
                     if self.y - player1.y <= (i+1)/len(player1.angles) * (player1.height + self.radius):
                         self.angle = player1.angles[i]
                         break
-                reward = [2, 0]
+                reward = [1, 0]
 
         # right collide
         elif self.x + self.radius >= player2.x and self.x + self.radius <= player2.x + player2.width:
@@ -92,7 +102,7 @@ class Ball:
                     if self.y - player2.y <= (i+1)/len(player2.angles) * (player2.height + self.radius):
                         self.angle = player2.angles[i]
                         break
-                reward = [0, 2]
+                reward = [0, 1]
 
         self.y += self.speed*sin(radians(self.angle))
         self.x += self.speed*cos(radians(self.angle))

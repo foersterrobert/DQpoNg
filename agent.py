@@ -100,10 +100,6 @@ class Agent:
                 self.score = 0
 
     def load(self, name):
-        # checkpoint = torch.load(f'model/{name}.pth', map_location=DEVICE)
-        # self.online_net.load_state_dict(checkpoint['online_net'])
-        # self.target_net.load_state_dict(checkpoint['target_net'])
-        # self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.online_net.load_state_dict(torch.load(f'model/{name}.pth', map_location=DEVICE))
 
     def save(self, file_name='model.pth'):
@@ -111,10 +107,4 @@ class Agent:
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
         file_name = os.path.join(model_folder_path, file_name)
-        # save_state = {
-        #     'online_net': self.online_net.state_dict(),
-        #     'target_net': self.target_net.state_dict(),
-        #     'optimizer': self.optimizer.state_dict(),
-        # }
-        # torch.save(save_state, file_name)
         torch.save(self.online_net.state_dict(), file_name)
