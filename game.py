@@ -130,7 +130,7 @@ class Ball:
             self.frame = 0
 
         if self.frame > 1000:
-          reward = [-10, 10]
+          reward = [-10, -10]
           if random.randint(0, 1) == 1:
             self.x = player1.x + player1.width * 2 + self.radius
             self.y = 240
