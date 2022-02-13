@@ -52,15 +52,9 @@ def main(args):
         if frame % N_FRAMES == 0:
             state_old = game.getState()
             action1 = player1.get_action(state_old, frame/N_FRAMES if args['train'] else 'testing')
-            if action1 == 0:
-                game.player1.mode = -1
-            else:
-                game.player1.mode = 1
+            game.player1.mode = action1 * 2 - 1 # 0, 1 -> -1, 1
             # action2 = player2.get_action(state_old, frame/N_FRAMES if args['train'] else False)
-            # if action2 == 0:
-            #     game.player2.mode = -1
-            # else:
-            #     game.player2.mode = 1
+            # game.player2.mode = action2 * 2 - 1 # 0, 1 -> -1, 1
             reward, done = game.run()
             if args['train']:
                 state_new = game.getState()
