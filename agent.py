@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
-import os
 
 GAMMA = 0.95
 BATCH_SIZE = 64
@@ -20,14 +19,15 @@ TARGET_UPDATE_FREQ = 10000
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Agent:
-    def __init__(self):
+    def __init__(self, name):
         self.online_net = Linear_QNet(5, 2).to(DEVICE)
         self.target_net = Linear_QNet(5, 2).to(DEVICE)
         self.target_net.load_state_dict(self.online_net.state_dict())
         self.memory = deque(maxlen=MAX_MEMORY)
         self.optimizer = optim.Adam(self.online_net.parameters(), lr=LEARNING_RATE)
-        self.record = -50
+        self.name = name
         self.score = 0
+        self.record = 0
 
     def get_action(self, state, step):
         action = None
@@ -43,11 +43,17 @@ class Agent:
                 action = max_q_index.detach().item()
         return action
 
-    def train(self, experience, step, DDQN):
-        self.memory.append(experience)
-        if len(self.memory) > MIN_REPLAY_SIZE:
-            self.score += experience[2] # reward
+    def train(self, experience, step):
+        self.score += experience[2] # add reward to score
+        if experience[3]: # if done: check for record -> save model
+            if self.score > self.record:
+                self.record = self.score
+                print('Record:', self.record, 'Step:', step)
+                self.save()
+            self.score = 0
+        self.memory.append(experience) # append experience to replay buffer
 
+        if len(self.memory) > MIN_REPLAY_SIZE:            
             sample_experiences = random.sample(self.memory, BATCH_SIZE)
 
             state_olds = np.asarray([t[0] for t in sample_experiences])
@@ -56,6 +62,7 @@ class Agent:
             dones = np.asarray([t[3] for t in sample_experiences])
             state_news = np.asarray([t[4] for t in sample_experiences])
 
+            # turn sample experience to tensor
             state_olds_t = torch.as_tensor(state_olds, dtype=torch.float32, device=DEVICE)
             actions_t = torch.as_tensor(actions, dtype=torch.int64, device=DEVICE).unsqueeze(-1)
             rewards_t = torch.as_tensor(rewards, dtype=torch.float32, device=DEVICE).unsqueeze(-1)
@@ -66,20 +73,15 @@ class Agent:
             q_values = self.online_net(state_olds_t)
             q_values_action = q_values.gather(dim=1, index=actions_t)
 
-            # get Targets
-            if DDQN:
-                q_values_online = self.online_net(state_news_t)
-                q_values_online_max = q_values_online.argmax(dim=1, keepdim=True)
-                q_values_target = self.target_net(state_news_t)
-                q_values_target_selected = q_values_target.gather(dim=1, index=q_values_online_max)
-                targets = rewards_t + GAMMA * (1 - dones_t) * q_values_target_selected
-            else:
-                q_values_target = self.target_net(state_news_t)
-                q_values_target_max = q_values_target.max(dim=1, keepdim=True)[0]
-                targets = rewards_t + GAMMA * (1 - dones_t) * q_values_target_max
+            # get Targets | Double-DQN
+            q_values_online = self.online_net(state_news_t)
+            q_values_online_max = q_values_online.argmax(dim=1, keepdim=True)
+            q_values_target = self.target_net(state_news_t)
+            q_values_target_selected = q_values_target.gather(dim=1, index=q_values_online_max)
+            targets = rewards_t + GAMMA * (1 - dones_t) * q_values_target_selected
 
-            # Compute Loss
-            loss = nn.functional.smooth_l1_loss(q_values_action, targets)
+            # Compute mse Loss
+            loss = nn.functional.mse_loss(q_values_action, targets)
 
             # Gradient Descent
             self.optimizer.zero_grad()
@@ -88,23 +90,10 @@ class Agent:
 
             # Update Target Net
             if max(-1, step - MIN_REPLAY_SIZE) % TARGET_UPDATE_FREQ == 0:
-                print(step)
                 self.target_net.load_state_dict(self.online_net.state_dict())
 
-            # check for record and save model if done
-            if experience[3]: # done
-                if self.score > self.record:
-                    self.record = self.score
-                    print('Record:', self.record, 'Step:', step)
-                    self.save()
-                self.score = 0
+    def load(self):
+        self.online_net.load_state_dict(torch.load(self.name, map_location=DEVICE))
 
-    def load(self, name):
-        self.online_net.load_state_dict(torch.load(f'model/{name}.pth', map_location=DEVICE))
-
-    def save(self, file_name='model.pth'):
-        model_folder_path = './model'
-        if not os.path.exists(model_folder_path):
-            os.makedirs(model_folder_path)
-        file_name = os.path.join(model_folder_path, file_name)
-        torch.save(self.online_net.state_dict(), file_name)
+    def save(self):
+        torch.save(self.online_net.state_dict(), self.name)

@@ -5,9 +5,10 @@ from hand import Hand
 import cv2
 import itertools
 import argparse
+from threading import Thread
+import sys
 
-N_FRAMES = 2
-N_FRAMES_HAND = 4
+N_FRAMES = 4
 
 def check_events():
     for event in pygame.event.get():
@@ -15,51 +16,46 @@ def check_events():
             return False
     return True
 
-def bot_action(game, player):
-    if player == 1:
-        if game.ball.y < game.player1.y + game.player1.height/2:
-            game.player1.mode = -1
-        elif game.ball.y > game.player1.y - game.player1.height/2:
-            game.player1.mode = 1
-    else:
-        if game.ball.y < game.player2.y + game.player2.height/2:
-            game.player2.mode = -1
-        elif game.ball.y > game.player2.y - game.player2.height/2:
-            game.player2.mode = 1
+def bot_action(game):
+    if game.ball.y < game.player2.y + game.player2.height/2:
+        game.player2.mode = -1
+    elif game.ball.y > game.player2.y - game.player2.height/2:
+        game.player2.mode = 1
+
+def human_action(cap, hand, game):
+    while True:
+        success, image = cap.read()
+        run, action = hand.get_action(success, image)
+        game.player2.mode = action
 
 def main(args):
     game = Game(args['see'], args['train'])
-    player1 = Agent()
-    # player2 = Agent()
+    player1 = Agent('model/Pong.pth')
     if args['load']:
-        player1.load('player1')
-        # player2.load('player2')
+        player1.load()
     if args['human']:
         hand = Hand()
         cap = cv2.VideoCapture(0)
+        thread = Thread(target=human_action, args=(cap, hand, game))
+        thread.daemon = True
+        thread.start()
     run = True
+    state_old = game.getState()
     for frame in itertools.count():
         if not run:
             break
         if args['see']:
             run = check_events()
         if args['bot']:
-            bot_action(game, 2)
-        if args['human'] and frame % N_FRAMES_HAND == 0:
-            success, image = cap.read()
-            run, action = hand.get_action(success, image)
-            game.player2.mode = action
+            bot_action(game)
         if frame % N_FRAMES == 0:
-            state_old = game.getState()
             action1 = player1.get_action(state_old, frame/N_FRAMES if args['train'] else 'testing')
             game.player1.mode = action1 * 2 - 1 # 0, 1 -> -1, 1
-            # action2 = player2.get_action(state_old, frame/N_FRAMES if args['train'] else False)
-            # game.player2.mode = action2 * 2 - 1 # 0, 1 -> -1, 1
-            reward, done = game.run()
-            if args['train']:
-                state_new = game.getState()
-                player1.train((state_old, action1, reward[0], done[0], state_new), frame/N_FRAMES, True)
-                # player2.train((state_old, action2, reward[1], done[1], state_new), frame/N_FRAMES, False)
+        reward, done = game.run()
+        state_new = game.getState()
+        if args['train']:
+            player1.train((state_old, action1, reward[0], done[0], state_new), frame/N_FRAMES, True)
+        state_old = state_new
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -76,3 +72,4 @@ if __name__ == '__main__':
         elif value == 'n':
             argsDict[key] = False
     main(argsDict)
+    sys.exit()
