@@ -30,9 +30,9 @@ def human_action(cap, hand, game):
 
 def main(args):
     game = Game(args['see'], args['train'])
-    player1 = Agent('model/Pong.pth')
+    agent = Agent('Pong.pth')
     if args['load']:
-        player1.load()
+        agent.load()
     if args['human']:
         hand = Hand()
         cap = cv2.VideoCapture(0)
@@ -49,12 +49,12 @@ def main(args):
         if args['bot']:
             bot_action(game)
         if frame % N_FRAMES == 0:
-            action1 = player1.get_action(state_old, frame/N_FRAMES if args['train'] else 'testing')
+            action1 = agent.get_action(state_old, frame if args['train'] else 'testing')
             game.player1.mode = action1 * 2 - 1 # 0, 1 -> -1, 1
         reward, done = game.run()
         state_new = game.getState()
         if args['train']:
-            player1.train((state_old, action1, reward[0], done[0], state_new), frame/N_FRAMES, True)
+            agent.train((state_old, action1, reward, done, state_new), frame, True)
         state_old = state_new
 
 if __name__ == '__main__':
