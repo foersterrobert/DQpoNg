@@ -1,5 +1,4 @@
 # Double-DQN for Pong
-![DQpoNg](assets/DQpoNg.gif)
 
 #### requirements:
 ```js
